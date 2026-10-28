@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><link rel="stylesheet" href="styles.css"></head>
+<body>
+  <main>
+    <header><div class="eyebrow">PHOTOSHOP × CODEX</div><h1>图像桥</h1><p>把修改带出去，把结果放回原位。</p></header>
+    <section id="connection">
+      <div class="section-title">连接本机桥接程序 <span id="connectionState">未连接</span></div>
+      <input id="pairToken" type="password" placeholder="粘贴启动窗口中的配对码" aria-label="配对码">
+      <button id="connect">保存并连接</button>
+    </section>
+    <section>
+      <div class="section-title">01 · 截取画面</div>
+      <div class="row"><button id="captureSelection" class="grow">截取局部选区</button><button id="captureCanvas" class="grow">截取整个画布</button></div>
+      <p class="hint">使用画布像素，不受屏幕缩放影响。局部模式保留选区形状及羽化。</p>
+      <div id="captureInfo" class="info">尚未截取</div>
+    </section>
+    <section>
+      <div class="section-title">02 · 告诉 Codex 怎么改</div>
+      <textarea id="prompt" placeholder="例如：保留主体和构图，把背景改成清晨的森林。" aria-label="修改需求"></textarea>
+      <button id="send" class="primary" disabled>发送到 Codex 桌面</button>
+      <p class="hint">会打开新聊天并预填需求；请在 Codex 点击发送。</p>
+    </section>
+    <section>
+      <div class="section-title">03 · 回传原位 <button id="refresh" class="small">刷新</button></div>
+      <div id="jobs"><p class="hint">任务会显示在这里。</p></div>
+    </section>
+    <div id="status" role="status">请先启动本地桥接程序并配对。</div>
+    <footer>预览版 0.1 · 新图层回传 · 原图保留</footer>
+  </main>
+  <script src="panel.js"></script>
+</body>
+</html>

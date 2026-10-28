@@ -1,0 +1,11 @@
+import { mkdirSync, rmSync, cpSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const dist = path.join(root, 'dist'), staging = path.join(dist, 'PS-Codex-Bridge-0.1.0');
+mkdirSync(dist, { recursive: true }); rmSync(staging, { force: true, recursive: true }); mkdirSync(staging);
+for (const file of ['bridge', 'plugin', 'scripts', 'tests', 'package.json', 'README.md', 'TESTING.md', 'LICENSE', '启动图像桥.command', '启用Adobe开发模式.command']) cpSync(path.join(root, file), path.join(staging, file), { recursive: true, filter: file => !['.uxprc', '.DS_Store'].includes(path.basename(file)) });
+const zip = path.join(dist, 'PS-Codex-Bridge-0.1.0.zip'); rmSync(zip, { force: true });
+execFileSync('/usr/bin/ditto', ['-c', '-k', '--norsrc', '--noextattr', '--keepParent', staging, zip]);
+console.log(zip);

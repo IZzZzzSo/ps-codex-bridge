@@ -1,0 +1,16 @@
+{
+  "name": "ps-codex-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Photoshop UXP and Codex desktop local image bridge",
+  "scripts": {
+    "start": "node bridge/server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs",
+    "package": "node scripts/package.mjs",
+    "package:ccx": "node scripts/create-icons.mjs && node scripts/adobe-package.mjs",
+    "setup:adobe": "node scripts/setup-tooling.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
+  "engines": { "node": ">=20" }
+}

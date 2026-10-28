@@ -1,0 +1,23 @@
+{
+  "manifestVersion": 5,
+  "id": "com.moxiangjing.ps-codex-bridge",
+  "name": "PS ↔ Codex 图像桥",
+  "version": "0.1.0",
+  "main": "index.html",
+  "host": { "app": "PS", "minVersion": "27.0.0", "data": { "apiVersion": 2 } },
+  "entrypoints": [{
+    "type": "panel",
+    "id": "bridgePanel",
+    "label": { "default": "PS ↔ Codex 图像桥" },
+    "minimumSize": { "width": 280, "height": 460 },
+    "preferredDockedSize": { "width": 340, "height": 740 },
+    "preferredFloatingSize": { "width": 380, "height": 780 },
+    "icons": [{ "width": 23, "height": 23, "path": "icons/bridge.png", "scale": [1, 2], "theme": ["darkest", "dark", "medium", "light", "lightest"] }]
+  }],
+  "icons": [{ "width": 23, "height": 23, "path": "icons/bridge.png", "scale": [1, 2], "theme": ["darkest", "dark", "medium", "light", "lightest"], "species": ["generic"] }],
+  "requiredPermissions": {
+    "network": { "domains": ["http://localhost:17321", "http://127.0.0.1:17321"] },
+    "localFileSystem": "request",
+    "launchProcess": { "schemes": ["codex"], "extensions": [] }
+  }
+}

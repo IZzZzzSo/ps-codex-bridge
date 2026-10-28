@@ -1,0 +1,28 @@
+html { height: 100%; overflow: hidden; }
+body { height: 100%; overflow: hidden; background: #242424; color: #eee; font-family: -apple-system, sans-serif; font-size: 12px; margin: 0; }
+main { height: 100%; overflow-y: auto; overflow-x: hidden; padding: 18px; }
+header { margin-bottom: 20px; }
+.eyebrow { color: #aba79b; font-size: 10px; letter-spacing: 2px; }
+h1 { font-size: 27px; margin: 6px 0; }
+p { line-height: 1.5; }
+header p { color: #b8b8b8; margin: 4px 0; }
+section { border-top: 1px solid #444; padding-top: 14px; margin-bottom: 18px; }
+.section-title { font-weight: 600; margin-bottom: 10px; }
+#connectionState { color: #b4bd9e; font-size: 11px; margin-left: 10px; }
+input, textarea { display: block; width: 100%; padding: 9px; border: 1px solid #555; border-radius: 5px; color: #eee; background: #1c1c1c; margin-bottom: 10px; }
+textarea { height: 88px; }
+button { padding: 9px 10px; border-radius: 5px; border: 1px solid #666; background: #373737; color: #eee; cursor: pointer; }
+button:disabled { opacity: 0.4; cursor: default; }
+button.primary { background: #d9e6b6; border-color: #d9e6b6; color: #20251a; width: 100%; font-weight: 600; }
+.row { display: flex; flex-direction: row; }
+.grow { flex: 1; margin-right: 5px; }
+.hint { color: #aaa; font-size: 11px; }
+.info { background: #303030; padding: 10px; border-radius: 5px; line-height: 1.5; }
+.small { padding: 3px 7px; font-size: 11px; margin-left: 12px; }
+.job { padding: 10px; border: 1px solid #4b4b4b; border-radius: 6px; margin-bottom: 9px; }
+.job-title { font-weight: 600; margin-bottom: 4px; }
+.job p { margin: 5px 0; }
+.job button { margin: 5px 5px 0 0; font-size: 11px; }
+#status { padding: 10px; background: #30352b; border-radius: 5px; line-height: 1.5; white-space: pre-wrap; }
+#status.error { background: #482e2b; }
+footer { color: #888; margin-top: 14px; font-size: 10px; }
