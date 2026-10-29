@@ -44,7 +44,7 @@ export async function createServer({ runtime = DEFAULT_RUNTIME, port = 17321 } =
       if (req.method === 'GET') {
         const job = await store.get(id);
         if (!action) return send(res, 200, { job });
-        if (action === 'desktop') return send(res, 200, { desktopLink: store.desktopLink(job) });
+        if (action === 'desktop') return send(res, 200, { desktopLink: store.desktopLink(job), prompt: store.desktopPrompt(job), existing: job.destination?.mode === 'existing' });
         if (action === 'pixels') {
           if (!job.revision || !['ready', 'queued', 'applying', 'applied'].includes(job.state)) throw new Error('结果尚未就绪。');
           const pixels = await readFile(path.join(store.dir(id), `result-${job.revision}.rgba`));

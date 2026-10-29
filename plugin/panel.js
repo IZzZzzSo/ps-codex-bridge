@@ -81,26 +81,34 @@ async function takeCapture(mode) {
   capture = next;
   const b = next.bounds;
   $('captureInfo').textContent = next.document.name + '\n' + (mode === 'selection' ? '局部选区' : '整个画布') + ' · ' + (b.right - b.left) + ' × ' + (b.bottom - b.top) + ' px\n位置：' + b.left + ', ' + b.top;
+  $('captureInfo').className = 'info captured';
   status('画面已截取，输入需求后发送。');
 }
 async function openDesktop(id) {
-  const { desktopLink } = await api('/v1/jobs/' + id + '/desktop');
+  const { desktopLink, prompt, existing } = await api('/v1/jobs/' + id + '/desktop');
+  if (existing) {
+    try { await navigator.clipboard.setContent({ 'text/plain': prompt }); }
+    catch (e) { throw new Error('任务已保存，但复制需求失败：' + (e.message || String(e)) + '。可点击“重新打开 Codex”重试。'); }
+  }
   const error = await shell.openExternal(desktopLink);
   if (error) throw new Error('打开 Codex 失败：' + error + '。任务已保存，可点击“重新打开 Codex”。');
+  return existing;
 }
 async function sendCapture() {
   if (!capture) throw new Error('请先截取画面。');
-  const prompt = $('prompt').value.trim(); if (!prompt) throw new Error('请输入修改需求。');
+  const prompt = String($('prompt').value || '').trim(); if (!prompt) throw new Error('请输入修改需求。');
   validateTarget({ sessionId, document: capture.document }, currentDocument(capture.document.id), sessionId, capture.binding.valid);
   status('正在保存截图和位置记录…');
   const input = { mode: capture.mode, sessionId, document: capture.document, bounds: capture.bounds, prompt, pixels: base64(capture.pixels) };
+  input.destination = { mode: $('destinationMode').value, projectPath: $('projectPath').value, thread: $('threadLink').value };
   if (capture.mask) input.selectionMask = base64(capture.mask);
   const { job } = await api('/v1/jobs', 'POST', input);
+  try { await storage.secureStorage.setItem('destination-settings', JSON.stringify(input.destination)); } catch (_) { /* job remains usable if preference storage fails */ }
   bindings.set(job.id, capture.binding);
-  capture = null; $('captureInfo').textContent = '任务已保存，再次修改前可重新截取。';
+  capture = null; $('captureInfo').textContent = '已发送。继续修改时，请重新截取画面。'; $('captureInfo').className = 'info';
   await refresh();
-  await openDesktop(job.id);
-  status('已打开 Codex。请在聊天中点击发送；完成后回到这里点击“回传 PS”。');
+  const existing = await openDesktop(job.id);
+  status(existing ? '已打开指定对话，任务需求已复制。请在该对话按 ⌘V 粘贴并发送。' : '已打开新对话并预填需求。请点击发送，完成后回传 PS。');
 }
 function findLayer(layers, name) {
   for (const layer of layers) {
@@ -162,11 +170,13 @@ async function applyJob(original) {
 function addButton(parent, text, fn) {
   const button = document.createElement('button'); button.textContent = text; button.disabled = busy;
   button.addEventListener('click', () => task(fn)); parent.appendChild(button);
+  return button;
 }
 function render(jobs) {
   const container = $('jobs'); container.innerHTML = '';
   const own = jobs.filter(job => job.sessionId === sessionId);
-  if (!own.length) { const p = document.createElement('p'); p.className = 'hint'; p.textContent = '本次插件会话尚无任务。重载插件后请重新截取；历史文件保留在本机任务目录。'; container.appendChild(p); }
+  $('jobCount').textContent = String(own.length);
+  if (!own.length) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = '完成修改后，在这里选择结果并回传。'; container.appendChild(p); }
   const labels = { captured: '等待 Codex 修改', ready: '结果已就绪', queued: '等待写入 PS', applying: '正在回传', applied: '已回传' };
   for (const job of own) {
     const box = document.createElement('div'); box.className = 'job';
@@ -188,7 +198,7 @@ function render(jobs) {
       validateTarget(job, currentDocument(job.document.id), sessionId, binding && binding.valid);
       await api('/v1/jobs/' + job.id + '/queue', 'POST', { revision: job.revision });
       const { job: queued } = await api('/v1/jobs/' + job.id); await applyJob(queued); await refresh();
-    });
+    }).className = 'return-action';
     container.appendChild(box);
   }
 }
@@ -210,17 +220,48 @@ async function poll() {
 async function connect() {
   $('connectionState').textContent = '正在连接…';
   status('正在连接本机图像桥…');
-  const candidate = $('pairToken').value.trim(); if (candidate) token = candidate;
+  const candidate = String($('pairToken').value || '').trim(); if (candidate) token = candidate;
   try { await refresh(); }
   catch (e) { connected = false; $('connectionState').textContent = '连接失败：' + e.message; throw e; }
   await storage.secureStorage.setItem('pair-token', token);
   $('pairToken').value = ''; $('pairToken').placeholder = '已保存配对码，重新连接可直接点击';
+  $('connection').style.display = 'none';
   status('已连接。可以截取局部选区或整个画布。');
 }
 // A conservative guard: closing any document or changing canvas geometry
 // invalidates pending bindings. This avoids document-ID reuse and stale coordinates.
 const geometryEvents = ['close', 'crop', 'imageSize', 'canvasSize', 'rotate', 'flip', 'revert'];
 async function initialize() {
+  const toggle = id => { $(id).style.display = $(id).style.display === 'none' ? 'block' : 'none'; };
+  $('toggleConnection').addEventListener('click', () => toggle('connection'));
+  $('toggleDestination').addEventListener('click', () => toggle('destinationSettings'));
+  $('doneDestination').addEventListener('click', () => { $('destinationSettings').style.display = 'none'; });
+  const updateDestination = () => {
+    const existing = $('destinationMode').value === 'existing';
+    $('projectPath').style.display = existing ? 'none' : 'block';
+    $('threadLink').style.display = existing ? 'block' : 'none';
+    $('targetNew').textContent = existing ? '新对话' : '✓ 新对话';
+    $('targetExisting').textContent = existing ? '✓ 已有对话' : '已有对话';
+    $('targetNew').className = existing ? 'grow' : 'grow selected';
+    $('targetExisting').className = existing ? 'grow selected' : 'grow';
+    const thread = String($('threadLink').value || '').trim().replace(/^codex:\/\/threads\//, '');
+    const project = String($('projectPath').value || '').trim().split('/').filter(Boolean).pop();
+    $('destinationSummary').textContent = existing ? (thread ? '已有对话 · ' + thread.slice(0, 8) : '已有对话 · 待设置') : (project ? '新对话 · ' + project : '新对话');
+    $('sendHint').textContent = existing ? '打开目标对话后，按 ⌘V 粘贴并发送' : '打开新对话后，确认需求并发送';
+    $('destinationHint').textContent = existing ? '在目标 Codex 对话按 ⌘⌥L 复制本地对话链接。此模式会覆盖剪贴板为任务需求，打开对话后请 ⌘V 粘贴发送。' : '填写项目工作目录；不保证自动加入侧边栏项目。读取任务文件时可能需要目录访问确认。';
+  };
+  $('destinationMode').value = 'new';
+  $('threadLink').addEventListener('input', updateDestination);
+  $('projectPath').addEventListener('input', updateDestination);
+  $('targetNew').addEventListener('click', () => { $('destinationMode').value = 'new'; updateDestination(); });
+  $('targetExisting').addEventListener('click', () => { $('destinationMode').value = 'existing'; updateDestination(); });
+  try {
+    const bytes = await storage.secureStorage.getItem('destination-settings');
+    const saved = JSON.parse(new TextDecoder().decode(bytes));
+    $('destinationMode').value = saved.mode === 'existing' ? 'existing' : 'new';
+    $('projectPath').value = saved.projectPath || ''; $('threadLink').value = saved.thread || '';
+  } catch (_) { /* default destination */ }
+  updateDestination();
   $('connect').addEventListener('click', () => task(connect));
   $('captureSelection').addEventListener('click', () => task(() => takeCapture('selection')));
   $('captureCanvas').addEventListener('click', () => task(() => takeCapture('canvas')));

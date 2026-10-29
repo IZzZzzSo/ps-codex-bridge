@@ -10,21 +10,23 @@ async function panelHarness() {
   let layerId = 30, failWrite = false, failAck = false, closed = false;
   const app = { get documents() { return closed ? [] : [doc]; }, get activeDocument() { return closed ? null : doc; } };
   const elementsFor = id => {
-    if (!elements.has(id)) elements.set(id, { value: '', textContent: '', className: '', disabled: false, placeholder: '', innerHTML: '', addEventListener() {}, appendChild() {} });
+    if (!elements.has(id)) elements.set(id, { style: {}, value: '', textContent: '', className: '', disabled: false, placeholder: '', innerHTML: '', addEventListener() {}, appendChild() {} });
     return elements.get(id);
   };
   const context = vm.createContext({
     console, Uint8Array, ArrayBuffer, setInterval: () => 1, clearInterval() {},
+    navigator: { clipboard: { async setContent(content) { calls.push(['clipboard', content]); } } },
     document: { getElementById: elementsFor, querySelectorAll: () => [], createElement: () => ({ addEventListener() {}, appendChild() {} }) },
     fetch: async (url, options) => {
       const route = url.replace('http://127.0.0.1:17321', ''); calls.push(['http', route]);
       if (route.endsWith('/pixels')) return { ok: true, arrayBuffer: async () => new Uint8Array(16).fill(255).buffer };
+      if (route.endsWith('/desktop')) return { ok: true, json: async () => ({ desktopLink: 'codex://threads/12345678-1234-1234-1234-123456789012', prompt: '读取任务并修改图片', existing: true }) };
       if (route.endsWith('/complete') && failAck) throw new Error('network lost');
       return { ok: true, json: async () => ({ jobs: [] }) };
     },
     require: name => {
       if (name === './geometry.js') return geometry;
-      if (name === 'uxp') return { entrypoints: { setup() {} }, storage: { secureStorage: { async getItem() { throw new Error('first run'); }, async setItem() {} } }, shell: {} };
+      if (name === 'uxp') return { entrypoints: { setup() {} }, storage: { secureStorage: { async getItem() { throw new Error('first run'); }, async setItem() {} } }, shell: { async openExternal(link) { calls.push(['open', link]); return ''; } } };
       if (name === 'photoshop') return {
         app, constants: { DocumentMode: { RGB: 'RGB' }, BitsPerChannelType: { THIRTYTWO: '32' }, ElementPlacement: { PLACEBEFORE: 'before' } },
         action: { async addNotificationListener(events, callback) { context.notify = callback; }, async batchPlay() { calls.push(['select-document']); } },
@@ -43,13 +45,21 @@ async function panelHarness() {
     }
   });
   doc.createLayer = async ({ name }) => { const layer = { id: layerId++, name }; doc.layers.unshift(layer); calls.push(['layer', name]); return layer; };
-  vm.runInContext(source + '\nglobalThis.harness = { takeCapture, applyJob, base64, getSession: () => sessionId, getCapture: () => capture, setToken: value => { token = value; }, bind: id => { const b = { valid: true, documentId: 12 }; bindings.set(id, b); allBindings.add(b); } };', context);
+  vm.runInContext(source + '\nglobalThis.harness = { takeCapture, applyJob, openDesktop, base64, getSession: () => sessionId, getCapture: () => capture, setToken: value => { token = value; }, bind: id => { const b = { valid: true, documentId: 12 }; bindings.set(id, b); allBindings.add(b); } };', context);
   await new Promise(resolve => setImmediate(resolve));
   const h = context.harness; h.setToken('test-token');
   const job = { id: '12345678-1234-1234-1234-123456789012', state: 'applying', lease: 'lease', revision: 1, sessionId: h.getSession(), document: { id: 12, name: doc.name, width: 100, height: 80 }, bounds: { left: 10, top: 20, right: 12, bottom: 22 }, width: 2, height: 2 };
   h.bind(job.id);
   return { h, doc, job, calls, notify: () => context.notify(), close: () => { closed = true; }, failWrite: () => { failWrite = true; }, failAck: value => { failAck = value; } };
 }
+test('existing chat copies the task with the UXP navigator clipboard before opening', async () => {
+  const { h, calls } = await panelHarness();
+  assert.equal(await h.openDesktop('job'), true);
+  const copy = calls.findIndex(c => c[0] === 'clipboard');
+  const open = calls.findIndex(c => c[0] === 'open');
+  assert.equal(calls[copy][1]['text/plain'], '读取任务并修改图片');
+  assert.ok(copy >= 0 && open > copy);
+});
 test('panel capture pads trimmed content and keeps the original selection mask', async () => {
   const { h } = await panelHarness(); await h.takeCapture('selection');
   const capture = h.getCapture();

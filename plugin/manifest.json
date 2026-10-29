@@ -16,6 +16,7 @@
   }],
   "icons": [{ "width": 23, "height": 23, "path": "icons/bridge.png", "scale": [1, 2], "theme": ["darkest", "dark", "medium", "light", "lightest"], "species": ["generic"] }],
   "requiredPermissions": {
+    "clipboard": "readAndWrite",
     "network": { "domains": ["http://localhost:17321", "http://127.0.0.1:17321"] },
     "localFileSystem": "request",
     "launchProcess": { "schemes": ["codex"], "extensions": [] }
